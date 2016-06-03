@@ -3,7 +3,6 @@ package kr.tinywind.eyelike;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 import org.opencv.objdetect.CascadeClassifier;
-import org.opencv.video.Video;
 
 import java.io.IOException;
 import java.util.List;
@@ -24,12 +23,13 @@ public class Main {
         System.load("C:/Users/tinywind/IdeaProjects/eyeLike/lib/x64/opencv_java249.dll");
     }
 
+    Imshow mainImshow = new Imshow("Capture - Face detection");
     private CascadeClassifier face_cascade = new CascadeClassifier();
     private String face_window_name = "Capture - Face";
     private Mat debugImage = new Mat();
     private Mat skinCrCbHist = Mat.zeros(new Size(256, 256), CV_8UC1);
-    private FindEyeCenter eyeCenter;
-    private FindEyeCorner eyeCorner;
+    private FindEyeCenter eyeCenter = new FindEyeCenter();
+    private FindEyeCorner eyeCorner = new FindEyeCorner();
 //    private static RNG rng(12345);
 
     public static void main(String[] args) throws IOException {
@@ -44,24 +44,7 @@ public class Main {
             return;
         }
 
-        String main_window_name = "Capture - Face detection";
-//        namedWindow(main_window_name, CV_WINDOW_NORMAL);
-//        moveWindow(main_window_name, 400, 100);
-//        namedWindow(face_window_name, CV_WINDOW_NORMAL);
-//        moveWindow(face_window_name, 10, 100);
-//        namedWindow("Right Eye", CV_WINDOW_NORMAL);
-//        moveWindow("Right Eye", 10, 600);
-//        namedWindow("Left Eye", CV_WINDOW_NORMAL);
-//        moveWindow("Left Eye", 10, 800);
-//        namedWindow("aa", CV_WINDOW_NORMAL);
-//        moveWindow("aa", 10, 800);
-//        namedWindow("aaa", CV_WINDOW_NORMAL);
-//        moveWindow("aaa", 10, 800);
-
         ellipse(skinCrCbHist, new Point(113, 155.6), new Size(23.4, 15.2), 43.0, 0.0, 360.0, new Scalar(255, 255, 255), -1);
-
-        Video video = new Video();
-
 
         frame = Highgui.imread(ANALYSIS_FILE_PATH);
 
@@ -69,14 +52,10 @@ public class Main {
         frame.copyTo(debugImage);
 
         if (!frame.empty()) {
-            detectAndDisplay(frame);
+            detectAndDisplay(frame, 1);
         } else {
             System.out.println(" --(!) No captured frame -- Break!");
-            return;
         }
-
-        // new Imshow(main_window_name).showImage(debugImage);
-        imwrite("output.png", frame);
     }
 
     private void findEyes(Mat frame_gray, Rect face) {
@@ -152,20 +131,30 @@ public class Main {
         new Imshow(face_window_name).showImage(faceROI);
     }
 
-    private void detectAndDisplay(Mat frame) {
+    private void detectAndDisplay(Mat frame, int index) {
         Vector<Mat> rgbChannels = new Vector<>(3);
         split(frame, rgbChannels);
         Mat frame_gray = rgbChannels.get(2).clone();
 
+        int width = frame.cols();
+        int height = frame.rows();
+        int min = Integer.min(width, height);
+        int max = Integer.max(width, height);
+        int faceMinSideLength = min / 3;
+        int faceMaxSideLength = (int) (max * 1.5);
+
         MatOfRect faces = new MatOfRect();
-        face_cascade.detectMultiScale(frame_gray, faces, 1.1, 2, 0, new Size(150, 150), new Size(950, 950));
+        face_cascade.detectMultiScale(frame_gray, faces, 1.1, 2, 0,
+                new Size(faceMinSideLength, faceMinSideLength),
+                new Size(faceMaxSideLength, faceMaxSideLength));
         List<Rect> rectList = faces.toList();
 
-        for (Rect rect : rectList)
-            rectangle(debugImage, rect.tl(), rect.br(), Scalar.all(5));
-
-        if (rectList.size() > 0) {
-//            findEyes(frame_gray, rectList.get(0));
+        for (int i = 0; i < rectList.size(); i++) {
+            Rect e = rectList.get(i);
+            rectangle(debugImage, e.tl(), e.br(), new Scalar(0, 255, 0), 5);
+            imwrite("debug_face.png", debugImage);
+            findEyes(frame_gray, e);
+            // mainImshow.showImage(debugImage);
         }
     }
 }

@@ -66,9 +66,12 @@ public class FindEyeCenter {
 
 
     public Point findEyeCenter(Mat face, Rect eye, String debugWindow) {
+        imwrite("debug_face.png", face);
         Mat eyeROIUnscaled = new Mat(face, eye);
+        imwrite("debug_eyeROIUnscaled.png", face);
         Mat eyeROI = new Mat();
         scaleToFastSize(eyeROIUnscaled, eyeROI);
+        imwrite("debug_eyeROI.png", face);
         rectangle(face, eye.tl(), eye.br(), new Scalar(1234));
         Mat gradientX = computeMatXGradient(eyeROI);
         Mat gradientY = computeMatXGradient(eyeROI.t()).t();
@@ -86,7 +89,8 @@ public class FindEyeCenter {
                 }
             }
         }
-        new Imshow(debugWindow).showImage(gradientX);
+        imwrite("debug_gradientX.png", gradientX);
+//        new Imshow(debugWindow).showImage(gradientX);
 
         Mat weight = new Mat();
         GaussianBlur(eyeROI, weight, new Size(kWeightBlurSize, kWeightBlurSize), 0, 0);
@@ -95,6 +99,7 @@ public class FindEyeCenter {
                 weight.put(y, x, 255 - (byte) weight.get(y, x)[0]);
             }
         }
+        imwrite("debug_weight.png", gradientX);
 
         Mat outSum = Mat.zeros(eyeROI.rows(), eyeROI.cols(), CV_64F);
         System.out.println("Eye Size: " + outSum.cols() + ", " + outSum.rows());
