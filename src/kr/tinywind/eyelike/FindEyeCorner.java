@@ -2,6 +2,7 @@ package kr.tinywind.eyelike;
 
 import org.opencv.core.*;
 
+import static kr.tinywind.eyelike.Global.YELLOW;
 import static org.opencv.core.Core.flip;
 import static org.opencv.core.Core.minMaxLoc;
 import static org.opencv.core.CvType.CV_32F;
@@ -17,7 +18,7 @@ public class FindEyeCorner {
             {-1, -1, -1, -1, 0, 3},
             {1, 1, 1, 1, 1, 1},
     };
-    private Mat rightCornerKernel = new Mat(4, 6, CV_32F, new Scalar(kEyeCornerKernel[0][0], kEyeCornerKernel[1][0], kEyeCornerKernel[2][0], kEyeCornerKernel[3][0]));
+    private Mat rightCornerKernel = new Mat(4, 6, CV_32F, YELLOW);
     private Mat leftCornerKernel = new Mat(4, 6, CV_32F);
 
     public FindEyeCorner() {

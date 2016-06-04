@@ -32,7 +32,7 @@ public class Helper {
     public static double computeDynamicThreshold(Mat mat, double stdDevFactor) {
         MatOfDouble mean = new MatOfDouble();
         MatOfDouble stddev = new MatOfDouble();
-        meanStdDev(mat, mean, stddev);
+        meanStdDev(mat, mean, stddev); // Calculates a mean and standard deviation of array elements.
         double stdDev = stddev.get(0, 0)[0] / sqrt(mat.rows() * mat.cols());
         return stdDevFactor * stdDev + mean.get(0, 0)[0];
     }

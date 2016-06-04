@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Vector;
 
 import static kr.tinywind.eyelike.Constants.*;
+import static kr.tinywind.eyelike.Global.*;
 import static org.opencv.core.Core.*;
 import static org.opencv.core.CvType.CV_8UC1;
 import static org.opencv.highgui.Highgui.imwrite;
@@ -23,7 +24,7 @@ public class Main {
         System.load("C:/Users/tinywind/IdeaProjects/eyeLike/lib/x64/opencv_java249.dll");
     }
 
-    Imshow mainImshow = new Imshow("Capture - Face detection");
+    //    Imshow mainImshow = new Imshow("Capture - Face detection");
     private CascadeClassifier face_cascade = new CascadeClassifier();
     private String face_window_name = "Capture - Face";
     private Mat debugImage = new Mat();
@@ -44,7 +45,7 @@ public class Main {
             return;
         }
 
-        ellipse(skinCrCbHist, new Point(113, 155.6), new Size(23.4, 15.2), 43.0, 0.0, 360.0, new Scalar(255, 255, 255), -1);
+        ellipse(skinCrCbHist, new Point(113, 155.6), new Size(23.4, 15.2), 43.0, 0.0, 360.0, BLACK, -1);
 
         frame = Highgui.imread(ANALYSIS_FILE_PATH);
 
@@ -60,6 +61,7 @@ public class Main {
 
     private void findEyes(Mat frame_gray, Rect face) {
         Mat faceROI = new Mat(frame_gray, face);
+        imwrite("debug_faceROI.png", faceROI);
         Mat debugFace = faceROI.clone();
 
         if (kSmoothFaceImage) {
@@ -95,18 +97,18 @@ public class Main {
         rightRightCornerRegion.x += rightPupil.x;
         rightRightCornerRegion.height /= 2;
         rightRightCornerRegion.y += rightRightCornerRegion.height / 2;
-        rectangle(debugFace, leftRightCornerRegion.tl(), leftRightCornerRegion.br(), new Scalar(200));
-        rectangle(debugFace, leftLeftCornerRegion.tl(), leftLeftCornerRegion.br(), new Scalar(200));
-        rectangle(debugFace, rightLeftCornerRegion.tl(), rightLeftCornerRegion.br(), new Scalar(200));
-        rectangle(debugFace, rightRightCornerRegion.tl(), rightRightCornerRegion.br(), new Scalar(200));
+        rectangle(debugFace, leftRightCornerRegion.tl(), leftRightCornerRegion.br(), RED);
+        rectangle(debugFace, leftLeftCornerRegion.tl(), leftLeftCornerRegion.br(), RED);
+        rectangle(debugFace, rightLeftCornerRegion.tl(), rightLeftCornerRegion.br(), RED);
+        rectangle(debugFace, rightRightCornerRegion.tl(), rightRightCornerRegion.br(), RED);
         // change eye centers to face coordinates
         rightPupil.x += rightEyeRegion.x;
         rightPupil.y += rightEyeRegion.y;
         leftPupil.x += leftEyeRegion.x;
         leftPupil.y += leftEyeRegion.y;
         // draw eye centers
-        circle(debugFace, rightPupil, 3, new Scalar(1234));
-        circle(debugFace, leftPupil, 3, new Scalar(1234));
+        circle(debugFace, rightPupil, 3, BLUE);
+        circle(debugFace, leftPupil, 3, BLUE);
 
         //-- Find Eye Corners
         if (kEnableEyeCorner) {
@@ -122,13 +124,12 @@ public class Main {
             Point rightRightCorner = eyeCorner.findEyeCorner(new Mat(faceROI, rightRightCornerRegion), false, false);
             rightRightCorner.x += rightRightCornerRegion.x;
             rightRightCorner.y += rightRightCornerRegion.y;
-            circle(faceROI, leftRightCorner, 3, new Scalar(200));
-            circle(faceROI, leftLeftCorner, 3, new Scalar(200));
-            circle(faceROI, rightLeftCorner, 3, new Scalar(200));
-            circle(faceROI, rightRightCorner, 3, new Scalar(200));
+            circle(faceROI, leftRightCorner, 3, GREEN);
+            circle(faceROI, leftLeftCorner, 3, GREEN);
+            circle(faceROI, rightLeftCorner, 3, GREEN);
+            circle(faceROI, rightRightCorner, 3, GREEN);
         }
-
-        new Imshow(face_window_name).showImage(faceROI);
+//        new Imshow(face_window_name).showImage(faceROI);
     }
 
     private void detectAndDisplay(Mat frame, int index) {
@@ -151,10 +152,11 @@ public class Main {
 
         for (int i = 0; i < rectList.size(); i++) {
             Rect e = rectList.get(i);
-            rectangle(debugImage, e.tl(), e.br(), new Scalar(0, 255, 0), 5);
-            imwrite("debug_face.png", debugImage);
+            rectangle(debugImage, e.tl(), e.br(), GREEN, 5);
+            imwrite("debug_face_" + i + ".png", debugImage);
             findEyes(frame_gray, e);
             // mainImshow.showImage(debugImage);
         }
+        imwrite("debug_face.png", debugImage);
     }
 }
