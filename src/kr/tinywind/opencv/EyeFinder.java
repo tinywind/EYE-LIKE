@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static java.lang.Math.max;
+import static java.lang.Math.pow;
 import static java.lang.Math.*;
 import static java.lang.Math.sqrt;
 import static kr.tinywind.opencv.Color.*;
@@ -56,12 +57,37 @@ public class EyeFinder {
         return p.x >= 0 && p.x < cols && p.y >= 0 && p.y < rows;
     }
 
-    private static double computeDynamicThreshold(Mat mat, double stdDevFactor) {
-        MatOfDouble mean = new MatOfDouble();
-        MatOfDouble stddev = new MatOfDouble();
-        meanStdDev(mat, mean, stddev); // Calculates a mean and standard deviation of array elements.
-        double stdDev = stddev.get(0, 0)[0] / sqrt(mat.rows() * mat.cols());
-        return stdDevFactor * stdDev + mean.get(0, 0)[0];
+    private static double computeDynamicThreshold(Mat mat, int channel, double stdDevFactor) {
+        long numElements = 0;
+        double meanValue = 0;
+        for (int y = 0; y < mat.rows(); y++) {
+            for (int x = 0; x < mat.cols(); x++) {
+                double v = mat.get(y, x)[channel];
+                if (0.0 <= v && v <= 255.0) {
+                    meanValue += v;
+                    numElements++;
+                }
+            }
+        }
+        meanValue /= numElements;
+        double standardDeviation = 0;
+        for (int y = 0; y < mat.rows(); y++) {
+            for (int x = 0; x < mat.cols(); x++) {
+                double v = mat.get(y, x)[channel];
+                if (0.0 <= v && v <= 255.0) {
+                    standardDeviation += pow(meanValue - v, 2) / (numElements - 1);
+                }
+            }
+        }
+        standardDeviation = sqrt(standardDeviation) / sqrt(numElements);
+        return stdDevFactor * standardDeviation + meanValue;
+        /** incorrect work: meanStdDev(mat, mean, stddev);
+         MatOfDouble mean = new MatOfDouble();
+         MatOfDouble stddev = new MatOfDouble();
+         meanStdDev(mat, mean, stddev);
+         double stdDev = stddev.get(0, 0)[0] / sqrt(mat.rows() * mat.cols());
+         return stdDevFactor * stdDev + mean.get(0, 0)[0];
+         */
     }
 
     private static Mat computeMatXGradient(Mat mat) {
@@ -172,9 +198,10 @@ public class EyeFinder {
 
     private Result detectAndDisplay(Mat image) {
         final Result result = new Result();
-        final Vector<Mat> rgbChannels = new Vector<>(3);
+        final Vector<Mat> rgbChannels = new Vector<>(image.channels());
         split(image, rgbChannels);
-        final Mat grayChannel = rgbChannels.get(2).clone();
+        final Mat grayChannel = new Mat();
+        rgbChannels.lastElement().copyTo(grayChannel);
 
         final int width = image.cols();
         final int height = image.rows();
@@ -204,6 +231,7 @@ public class EyeFinder {
         final Rect leftEyeRegion = new Rect((int) (faceArea.width * (options.kEyePercentSide / 100.0)), eyeRegionTop, eyeRegionWidth, eyeRegionHeight);
         final Rect rightEyeRegion = new Rect((int) (faceArea.width - eyeRegionWidth - faceArea.width * (options.kEyePercentSide / 100.0)), eyeRegionTop, eyeRegionWidth, eyeRegionHeight);
 
+        imwrite("debugImage_faceROI.png", faceROI);
         final Point leftPupil = findEyeCenter(faceROI, leftEyeRegion);
         final Point rightPupil = findEyeCenter(faceROI, rightEyeRegion);
 
@@ -254,11 +282,14 @@ public class EyeFinder {
         final Mat eyeROIUnscaled = new Mat(face, eye);
         final Mat eyeROI = new Mat();
         scaleToFastSize(eyeROIUnscaled, eyeROI);
+        imwrite("eyeROIUnscaled.png", eyeROIUnscaled);
+        imwrite("eyeROI.png", eyeROI);
         rectangle(face, eye.tl(), eye.br(), BLACK);
         final Mat gradientX = computeMatXGradient(eyeROI);
         final Mat gradientY = computeMatXGradient(eyeROI.t()).t();
         final Mat mags = matrixMagnitude(gradientX, gradientY);
-        final double gradientThresh = computeDynamicThreshold(mags, options.kGradientThreshold);
+        imwrite("mags.png", mags);
+        final double gradientThresh = computeDynamicThreshold(mags, 0, options.kGradientThreshold);
         for (int y = 0; y < eyeROI.rows(); ++y) {
             for (int x = 0; x < eyeROI.cols(); ++x) {
                 final double magnitude = mags.get(y, x)[0];
@@ -272,22 +303,27 @@ public class EyeFinder {
             }
         }
 
+        imwrite("gradientX.png", gradientX);
+        imwrite("gradientY.png", gradientY);
         final Mat weight = new Mat();
         GaussianBlur(eyeROI, weight, new Size(options.kWeightBlurSize, options.kWeightBlurSize), 0, 0);
+        imwrite("eyeROI.png", eyeROI);
+        imwrite("weight.png", weight);
         for (int y = 0; y < weight.rows(); ++y) {
             for (int x = 0; x < weight.cols(); ++x) {
                 weight.put(y, x, 255 - /*(byte)*/ weight.get(y, x)[0]);
             }
         }
+        imwrite("weight2.png", weight);
 
         final Mat outSum = Mat.zeros(eyeROI.rows(), eyeROI.cols(), CV_64F);
         System.out.println("Eye Size: " + outSum.cols() + ", " + outSum.rows());
         for (int y = 0; y < weight.rows(); ++y) {
             for (int x = 0; x < weight.cols(); ++x) {
-                final double gX = gradientX.get(y, x)[0], gY = gradientY.get(y, x)[0];
-                if (gX == 0.0 && gY == 0.0) {
+                final double gX = gradientX.get(y, x)[0];
+                final double gY = gradientY.get(y, x)[0];
+                if (gX == 0.0 && gY == 0.0)
                     continue;
-                }
                 testPossibleCentersFormula(x, y, weight, gX, gY, outSum);
             }
         }
